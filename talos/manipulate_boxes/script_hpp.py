@@ -38,6 +38,8 @@ p = argparse.ArgumentParser (description=
 p.add_argument ('--context', type=str, metavar='context',
                 default=defaultContext,
                 help="identifier of ProblemSolver instance")
+p.add_argument ('--ros-param', type=str, metavar='ros_param',
+                help="The name of the ROS param containing the URDF.")
 args = p.parse_args ()
 if args.context != defaultContext:
     createContext (args.context)
@@ -58,7 +60,8 @@ if args.context != defaultContext:
 
 client.manipulation.problem.resetProblem()
 
-robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(client, rolling_table=True)
+robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(client, rolling_table=True,
+        rosParam=args.ros_param)
 if isSimulation:
     ps.setMaxIterProjection (1)
 
@@ -83,7 +86,7 @@ left_gripper_lock, right_gripper_lock = \
     createGripperLockedJoints (ps, init_conf)
 table_lock = createTableLockedJoint (ps, table, init_conf)
 
-graph = makeGraph(robot, table, objects)
+graph, factory = makeGraph(ps, table, objects)
 
 # Add other locked joints in the edges.
 for edgename, edgeid in graph.edges.items():
@@ -237,9 +240,6 @@ if fixedArmWhenGrasping:
 
 ps.setRandomSeed(123)
 ps.selectPathProjector("Progressive", 0.2)
-# ps.selectPathValidation("Progressive", 0.01)
-ps.selectPathValidation("Discretized", 0.01)
-# ps.selectPathValidation("Dichotomy", 0.0)
 graph.setWeight ('Loop | f', 1)
 
 graph.initialize()
@@ -313,73 +313,6 @@ q_init = [
     0,
     1,
 ]
-
-q_init_2 = [
- 0.10232996455082483,
- -0.6765907825598196,
- 1.0127532891272562,
- -0.03128842007165536,
- 0.013789190720970663,
- 0.7297271046306221,
- 0.6828830395873728,
- -0.06433916542939629,
- 0.043870498049689115,
- -0.5628242161042075,
- 0.8841899013297069,
- -0.38432624897999573,
- -0.018779273888610132,
- -0.0643874479810337,
- 0.043105369681181664,
- -0.5358746332937586,
- 0.8649692122276535,
- -0.39205304402506713,
- -0.018012626496066456,
- 0.024791641046798815,
- 0.4783976095641855,
- 0.25329292829053024,
- 0.49327117282521676,
- 0.000516614757372389,
- -0.5245691832414258,
- -2.0805143073940602e-05,
- 0.00033056419866755993,
- 0.10017774309160198,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- -0.2561311712465022,
- -0.46825515018405794,
- 0.0017989159336655495,
- -0.5246715517230384,
- 1.3018926440700662e-05,
- 0.00020463708980818305,
- 0.10020429676688965,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.5257065303386299,
- 0.06401831552114343,
- 0.0002964373153980979,
- -0.2,
- 0.8574835283167916,
- -0.5,
- 0.5,
- 0.5,
- 0.5,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 0.0,
- 1.0]
 
 setGaussianShooter (ps, table, objects, q_init, 0.1)
 
