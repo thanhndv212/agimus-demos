@@ -1,0 +1,9 @@
+                                                                -*- outline -*-
+New in 1.1.0, 2020-07-03
+* Gain of visual servoing task has been reduced.
+* [talos/manipulate_boxes] Plan initial motion to look at the box.
+* [talos/manipulate_boxes] Make position of box different in motion planning
+  and in simulation.
+
+New in 1.0.0, 2020-07-01
+* Working version for Pyrene manipulating a box.
