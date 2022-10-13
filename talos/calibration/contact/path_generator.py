@@ -301,15 +301,15 @@ def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
     # pg.ps.client.basic.problem.addPath(finalPaths[0])
     pg.ps.client.basic.problem.addPath(concatenatePaths(finalPaths[0:]))
 
-def path_generator(ri, pg, ps, gripper, handles):
+def path_generator(ri, pg, ps, gripper, handles, iter,
+                    create_path=False, write_to_file=False):
     pg.gripper = gripper
-
     contacts = list()
     pre_grasps = list()
     handle_list = list()
     for handle in handles: 
         count = 0
-        while count < 3: 
+        while count < iter: 
             res, qpg, qg = pg.generateValidConfigForHandle(handle, q_init, step=3)
             if res:
                 pre_grasps.append(qpg)
@@ -317,35 +317,37 @@ def path_generator(ri, pg, ps, gripper, handles):
                 handle_list.append(handle)
                 count += 1
 
-    # create a list of paths linking ordered visting pre_grasps
-    ordered_cfgs = orderConfigurations(ps, pre_grasps)
-
-    # reorder contacts 
-    ordered_contacts = list()
-    ordered_idx = list()
-    ordered_handle_list = list()
-    for cfg in ordered_cfgs:
-        if cfg in pre_grasps:
-            idx = pre_grasps.index(cfg)
-            ordered_idx.append(idx)
-            ordered_contacts.append(contacts[idx])
-            ordered_handle_list.append(handle_list[idx])
-
-    ordered_cfgs = [q_init] + ordered_cfgs
-
-    for i, idx in enumerate(ordered_idx):
-        print(handle_list[idx])
-        go_to_pre_grasp(ri, pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
-        pre_grasp_to_contact(ri, pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
-    go_to_pre_grasp(ri,pg, handle_list[-1], ordered_cfgs[-1], q_init)
-    
+    if create_path:
+        # create a list of paths linking ordered visting pre_grasps
+        ordered_cfgs = orderConfigurations(ps, pre_grasps)
+        # reorder contacts 
+        ordered_contacts = list()
+        ordered_idx = list()
+        ordered_handle_list = list()
+        for cfg in ordered_cfgs:
+            if cfg in pre_grasps:
+                idx = pre_grasps.index(cfg)
+                ordered_idx.append(idx)
+                ordered_contacts.append(contacts[idx])
+                ordered_handle_list.append(handle_list[idx])
+        ordered_cfgs = [q_init] + ordered_cfgs
+        for i, idx in enumerate(ordered_idx):
+            print(handle_list[idx])
+            go_to_pre_grasp(ri, pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
+            pre_grasp_to_contact(ri, pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
+        go_to_pre_grasp(ri,pg, handle_list[-1], ordered_cfgs[-1], q_init)
+        l = 0
+        for i in range(ps.numberPaths()):
+            l+= ps.pathLength(i)
+        print("Path Length: ", l)
     #write to files
-    writeConfigsInFile('opt_contacts_{}'.format(handle_list[0]).replace("/","_"), contacts)
-    writeConfigsInFile('opt_pregrasps_{}'.format(handle_list[0]).replace("/","_"), pre_grasps)
+    if write_to_file:
+        writeConfigsInFile('opt_contacts_{}'.format(handle_list[0]).replace("/","_"), contacts)
+        writeConfigsInFile('opt_pregrasps_{}'.format(handle_list[0]).replace("/","_"), pre_grasps)
 
-    with open('opt_handles_{}'.format(handle_list[0]).replace("/","_"), "w") as fw:
-        for item in handle_list:
-            fw.write("%s\n" % item)
+        with open('opt_handles_{}'.format(handle_list[0]).replace("/","_"), "w") as fw:
+            for item in handle_list:
+                fw.write("%s\n" % item)
 
 def plan_paths(ri, pg, ps, gripper, file1, file2, file3):
     pg.gripper = gripper
