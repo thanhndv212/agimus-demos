@@ -78,6 +78,13 @@ p.add_argument ('--N', type=int, metavar='N', default=0,
                 help="number of configurations generated")
 args = p.parse_args ()
 
+
+# constant
+MAX_ACC_FREE = 0.25
+MAX_SAFETY_FREE = 0.9
+MAX_ACC_CONTACT = 0.25
+MAX_SAFETY_CONTACT = 0.04
+
 # Write configurations in a file in CSV format
 def writeConfigsInFile (filename, configs):
     with open (filename, "w") as f:
@@ -215,9 +222,9 @@ def goToContact(ri, pg, gripper, handle, q_init):
     isp.optimizerTypes = ["EnforceTransitionSemantic",
                                         "SimpleTimeParameterization"]
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, 0.9))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_FREE))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, 0.9))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_FREE))
     isp.manipulationProblem.setParameter\
         ("SimpleTimeParameterization/order", Any(TC_long, 2))
     paths = pg.generatePathForHandle(handle, q_init)
@@ -225,9 +232,9 @@ def goToContact(ri, pg, gripper, handle, q_init):
     # Transform second and third path into PathVector instances to time
     # parameterize them
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, 0.5))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_CONTACT))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, 0.04))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_CONTACT))
     finalPaths = [paths[0],]
     for i, p in enumerate(paths[1:]):
         path = p.asVector()
@@ -254,9 +261,9 @@ def go_to_pre_grasp(ri, pg, handle, qinit, qgoal):
     isp.optimizerTypes = ["EnforceTransitionSemantic",
                                         "SimpleTimeParameterization"]
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, 0.5))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_FREE))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, 0.9))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_FREE))
     isp.manipulationProblem.setParameter\
         ("SimpleTimeParameterization/order", Any(TC_long, 2))
     path = pg.generatePathToGoal(handle, qinit, qgoal)
@@ -267,9 +274,9 @@ def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
     isp.optimizerTypes = ["EnforceTransitionSemantic",
                                         "SimpleTimeParameterization"]
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, 0.5))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_FREE))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, 0.9))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_FREE))
     isp.manipulationProblem.setParameter\
         ("SimpleTimeParameterization/order", Any(TC_long, 2))
     paths = pg.generatePathToContact(handle, qpg, qg)
@@ -277,9 +284,9 @@ def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
     # Transform second and third path into PathVector instances to time
     # parameterize them
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, 0.5))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_CONTACT))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, 0.04))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_CONTACT))
     finalPaths = []
     for i, p in enumerate(paths[0:]):
         path = p.asVector()
@@ -301,7 +308,7 @@ def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
     # pg.ps.client.basic.problem.addPath(finalPaths[0])
     pg.ps.client.basic.problem.addPath(concatenatePaths(finalPaths[0:]))
 
-def path_generator(ri, pg, ps, gripper, handles, iter,
+def path_generator(ri, pg, ps, q_init, gripper, handles, iter,
                     create_path=False, write_to_file=False):
     pg.gripper = gripper
     contacts = list()
@@ -349,7 +356,7 @@ def path_generator(ri, pg, ps, gripper, handles, iter,
             for item in handle_list:
                 fw.write("%s\n" % item)
 
-def plan_paths(ri, pg, ps, gripper, file1, file2, file3):
+def plan_paths(ri, pg, ps, q_init, gripper, file1, file2, file3):
     pg.gripper = gripper
     contacts = readConfigsInFile(file1)
     pre_grasps = readConfigsInFile(file2)
@@ -413,6 +420,20 @@ initConf = [0, 0, 1.02, 0, 0, 0, 1, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0
 robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(None)
 initConf += [.5,0,0,0,0,0,1]
 ri = RosInterface(robot)
+tmp = ''
+while tmp != 'y':
+    print("Are you sure the robot is in half-sitting.")
+    tmp = raw_input()
+
+q_init = ri.getCurrentConfig(initConf, 5., 'talos/leg_left_6_joint')
+
+rank_g_left = robot.rankInConfiguration['talos/gripper_left_joint']
+rank_g_right = robot.rankInConfiguration['talos/gripper_right_joint']
+
+if q_init[rank_g_left] != 0:
+    q_init[rank_g_left] = 0
+if q_init[rank_g_right] != 0:
+    q_init[rank_g_right] = 0
 
 left_arm_lock  = createLeftArmLockedJoints (ps)
 right_arm_lock = createRightArmLockedJoints (ps)
@@ -423,9 +444,9 @@ elif args.arm == 'right':
 else:
     arm_locked = list()
 
-left_gripper_lock, right_gripper_lock = createGripperLockedJoints (ps, initConf)
+left_gripper_lock, right_gripper_lock = createGripperLockedJoints (ps, q_init)
 com_constraint, foot_placement, foot_placement_complement = \
-    createQuasiStaticEquilibriumConstraint (ps, initConf)
+    createQuasiStaticEquilibriumConstraint (ps, q_init)
 look_left_hand, look_right_hand = createGazeConstraints(ps)
 
 graph = ConstraintGraph(robot, "graph")
@@ -488,23 +509,12 @@ graph.addConstraints(
 )
 graph.initialize ()
 
-ps.setParameter("SimpleTimeParameterization/safety", 0.9)
-ps.setParameter("SimpleTimeParameterization/order", 2)
-ps.setParameter("SimpleTimeParameterization/maxAcceleration", .5)
-# ps.addPathOptimizer ("RandomShortcut")
-ps.addPathOptimizer ("EnforceTransitionSemantic")
-ps.addPathOptimizer ("SimpleTimeParameterization")
-
-res, q, err = graph.generateTargetConfig ("starting_motion", initConf,
-                                          initConf)
+res, q, err = graph.generateTargetConfig ("starting_motion", q_init,
+                                          q_init)
 if not res:
     raise RuntimeError ('Failed to project initial configuration')
 
 from agimus_demos.tools_hpp import PathGenerator
 pg = PathGenerator(ps, graph)
-# read current config (half sitting)
-q_init = ri.getCurrentConfig(initConf, 5., 'talos/leg_left_6_joint')
-res, q_init, err = pg.graph.generateTargetConfig('starting_motion', q_init,
-                                                    q_init)
 ps.setParameter('ConfigurationShooter/Gaussian/standardDeviation', 0.1)
 ps.setParameter('ConfigurationShooter/Gaussian/center', q_init)
