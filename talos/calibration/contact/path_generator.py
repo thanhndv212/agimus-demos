@@ -256,7 +256,7 @@ def goToContact(ri, pg, gripper, handle, q_init):
     pg.ps.client.basic.problem.addPath(finalPaths[0])
     pg.ps.client.basic.problem.addPath(concatenatePaths(finalPaths[1:]))
 
-def go_to_pre_grasp(ri, pg, handle, qinit, qgoal):
+def go_to_pre_grasp(pg, handle, qinit, qgoal):
     isp = pg.inStatePlanner
     isp.optimizerTypes = ["EnforceTransitionSemantic",
                                         "SimpleTimeParameterization"]
@@ -269,24 +269,20 @@ def go_to_pre_grasp(ri, pg, handle, qinit, qgoal):
     path = pg.generatePathToGoal(handle, qinit, qgoal)
     pg.ps.client.basic.problem.addPath(path)
 
-def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
+def pre_grasp_to_contact(pg, gripper, handle, qpg, qg):
     isp = pg.inStatePlanner
     isp.optimizerTypes = ["EnforceTransitionSemantic",
                                         "SimpleTimeParameterization"]
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_FREE))
+        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_CONTACT))
     isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_FREE))
+        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_CONTACT))
     isp.manipulationProblem.setParameter\
         ("SimpleTimeParameterization/order", Any(TC_long, 2))
     paths = pg.generatePathToContact(handle, qpg, qg)
     # First path is already time parameterized
     # Transform second and third path into PathVector instances to time
     # parameterize them
-    isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/maxAcceleration", Any(TC_double, MAX_ACC_CONTACT))
-    isp.manipulationProblem.setParameter\
-        ("SimpleTimeParameterization/safety", Any(TC_double, MAX_SAFETY_CONTACT))
     finalPaths = []
     for i, p in enumerate(paths[0:]):
         path = p.asVector()
@@ -308,22 +304,26 @@ def pre_grasp_to_contact(ri, pg, gripper, handle, qpg, qg):
     # pg.ps.client.basic.problem.addPath(finalPaths[0])
     pg.ps.client.basic.problem.addPath(concatenatePaths(finalPaths[0:]))
 
-def path_generator(ri, pg, ps, q_init, gripper, handles, iter,
+def path_generator(pg, ps, q_init, gripper, handles, iter, shrink_joints = False,
                     create_path=False, write_to_file=False):
+    if shrink_joints:
+        shrinkJointRange(pg.robot, 0.95)
     pg.gripper = gripper
     contacts = list()
     pre_grasps = list()
     handle_list = list()
     for handle in handles: 
         count = 0
-        while count < iter: 
+        while count < iter:
             res, qpg, qg = pg.generateValidConfigForHandle(handle, q_init, step=3)
             if res:
                 pre_grasps.append(qpg)
                 contacts.append(qg)
                 handle_list.append(handle)
                 count += 1
-
+                print("Succeeded generating pregrasp target for handle {}".format(handle))
+                check_in_bound(pg.robot, qpg)
+                check_in_bound(pg.robot, qg)
     if create_path:
         # create a list of paths linking ordered visting pre_grasps
         ordered_cfgs = orderConfigurations(ps, pre_grasps)
@@ -340,9 +340,9 @@ def path_generator(ri, pg, ps, q_init, gripper, handles, iter,
         ordered_cfgs = [q_init] + ordered_cfgs
         for i, idx in enumerate(ordered_idx):
             print(handle_list[idx])
-            go_to_pre_grasp(ri, pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
-            pre_grasp_to_contact(ri, pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
-        go_to_pre_grasp(ri,pg, handle_list[-1], ordered_cfgs[-1], q_init)
+            go_to_pre_grasp(pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
+            pre_grasp_to_contact(pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
+        go_to_pre_grasp(pg, handle_list[-1], ordered_cfgs[-1], q_init)
         l = 0
         for i in range(ps.numberPaths()):
             l+= ps.pathLength(i)
@@ -356,7 +356,7 @@ def path_generator(ri, pg, ps, q_init, gripper, handles, iter,
             for item in handle_list:
                 fw.write("%s\n" % item)
 
-def plan_paths(ri, pg, ps, q_init, gripper, file1, file2, file3):
+def plan_paths(pg, ps, q_init, gripper, file1, file2, file3):
     pg.gripper = gripper
     contacts = readConfigsInFile(file1)
     pre_grasps = readConfigsInFile(file2)
@@ -385,9 +385,9 @@ def plan_paths(ri, pg, ps, q_init, gripper, file1, file2, file3):
 
     for i, idx in enumerate(ordered_idx):
         print(handle_list[idx])
-        go_to_pre_grasp(ri, pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
-        pre_grasp_to_contact(ri, pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
-    go_to_pre_grasp(ri,pg, handle_list[-1], ordered_cfgs[-1], q_init)
+        go_to_pre_grasp(pg, handle_list[idx], ordered_cfgs[i], ordered_cfgs[i+1])
+        pre_grasp_to_contact(pg, pg.gripper, handle_list[idx], pre_grasps[idx], contacts[idx])
+    go_to_pre_grasp(pg, handle_list[-1], ordered_cfgs[-1], q_init)
     l = 0
     for i in range(ps.numberPaths()):
         l+= ps.pathLength(i)
@@ -442,7 +442,7 @@ robot.setJointBounds('talos/leg_left_4_joint', [bounds_knee_l[0], bounds_knee_l[
 ri = RosInterface(robot)
 tmp = ''
 while tmp != 'y':
-    print("Are you sure the robot is in half-sitting.")
+    print("Are you sure the robot is in half-sitting. y/n?")
     tmp = raw_input()
 
 q_init = ri.getCurrentConfig(initConf, 5., 'talos/leg_left_6_joint')
@@ -538,3 +538,4 @@ from agimus_demos.tools_hpp import PathGenerator
 pg = PathGenerator(ps, graph)
 ps.setParameter('ConfigurationShooter/Gaussian/standardDeviation', 0.1)
 ps.setParameter('ConfigurationShooter/Gaussian/center', q_init)
+selected_handles = table.handles[18:] + table.handles[13:17] + table.handles[8:10] + table.handles[19:23]
