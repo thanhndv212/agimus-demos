@@ -415,6 +415,21 @@ def mobilize_handles(crobot, dir, dis, handles):
             conf[2] += dis
         crobot.setHandlePositionInJoint(handle, conf)
 
+def check_in_bound(robot, q):
+    out_of_bound = []
+    for joint in robot.jointNames:
+        if 'root_joint' not in joint:
+            rank = robot.rankInConfiguration[joint]
+            bounds = robot.getJointBounds(joint)
+            assert len(bounds) == 2
+            if q[rank] < bounds[0] or q[rank] > bounds[1]:
+                print("{} is not in joint bound.".format(joint))
+                out_of_bound.append(joint)
+    if len(out_of_bound) != 0: 
+        print(out_of_bound)
+        return False
+    else: 
+        return True
 initConf = [0, 0, 1.02, 0, 0, 0, 1, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0, 0.006761, 0.25847, 0.173046, -0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, -0.25847, -0.173046, 0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(None)
