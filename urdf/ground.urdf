@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot name="ground">
-  <link name="world">
+  <link name="base_link">
     <visual>
       <geometry>
         <box size="5 5 0.02"/>
