@@ -430,10 +430,15 @@ def check_in_bound(robot, q):
         return False
     else: 
         return True
-initConf = [0, 0, 1.02, 0, 0, 0, 1, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0, 0.006761, 0.25847, 0.173046, -0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, -0.25847, -0.173046, 0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(None)
+initConf = [0, 0, 1.02, 0, 0, 0, 1, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0.0, 0.0, -0.411354, 0.859395, -0.448041, -0.001708, 0, 0.006761, 0.25847, 0.173046, -0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, -0.25847, -0.173046, 0.0002, -0.525366, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 initConf += [.5,0,0,0,0,0,1]
+robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(None)
+# set bounds on knee to prevent going too deep
+bounds_knee_r = robot.getJointBounds('talos/leg_right_4_joint')
+robot.setJointBounds('talos/leg_right_4_joint', [bounds_knee_r[0], bounds_knee_r[1] - 0.5])
+bounds_knee_l = robot.getJointBounds('talos/leg_left_4_joint')
+robot.setJointBounds('talos/leg_left_4_joint', [bounds_knee_l[0], bounds_knee_l[1] - 0.5])
 ri = RosInterface(robot)
 tmp = ''
 while tmp != 'y':
