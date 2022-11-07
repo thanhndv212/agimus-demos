@@ -50,9 +50,7 @@ class Table(object):
                 "contact_19", "contact_20", "contact_21",
                 "contact_22", "contact_23", "contact_24",
                 "contact_25", "contact_26", "contact_27",
-                "contact_28", "contact_29", "contact_30",
-                "contact_31", "contact_32", "contact_33",
-                "contact_34", "contact_35", "contact_36",]
+                "contact_28", ]
     # handles = ["contact_01"]
     rootJointType = "freeflyer"
     urdfFilename = "package://agimus_demos/urdf/desk.urdf"
