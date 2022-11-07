@@ -349,12 +349,14 @@ def path_generator(pg, ps, q_init, gripper, handles, iter, shrink_joints = False
         print("Path Length: ", l)
     #write to files
     if write_to_file:
+        print("write configs to file ... ")
         writeConfigsInFile('opt_contacts_{}'.format(handle_list[0]).replace("/","_"), contacts)
         writeConfigsInFile('opt_pregrasps_{}'.format(handle_list[0]).replace("/","_"), pre_grasps)
 
         with open('opt_handles_{}'.format(handle_list[0]).replace("/","_"), "w") as fw:
             for item in handle_list:
                 fw.write("%s\n" % item)
+    return ordered_cfgs, ordered_contacts, ordered_handle_list
 
 def plan_paths(pg, ps, q_init, gripper, file1, file2, file3):
     pg.gripper = gripper
@@ -436,9 +438,9 @@ initConf += [.5,0,0,0,0,0,1]
 robot, ps, vf, table, objects = makeRobotProblemAndViewerFactory(None)
 # set bounds on knee to prevent going too deep
 bounds_knee_r = robot.getJointBounds('talos/leg_right_4_joint')
-robot.setJointBounds('talos/leg_right_4_joint', [bounds_knee_r[0], bounds_knee_r[1] - 0.5])
+robot.setJointBounds('talos/leg_right_4_joint', [bounds_knee_r[0]+0.2, bounds_knee_r[1] - 0.5])
 bounds_knee_l = robot.getJointBounds('talos/leg_left_4_joint')
-robot.setJointBounds('talos/leg_left_4_joint', [bounds_knee_l[0], bounds_knee_l[1] - 0.5])
+robot.setJointBounds('talos/leg_left_4_joint', [bounds_knee_l[0]+0.2, bounds_knee_l[1] - 0.5])
 ri = RosInterface(robot)
 tmp = ''
 while tmp != 'y':
@@ -529,7 +531,7 @@ graph.addConstraints(
 )
 graph.initialize ()
 
-res, q, err = graph.generateTargetConfig ("starting_motion", q_init,
+res, q, err = graph.generateTargetConfig ("starting_motion", q_init, 
                                           q_init)
 if not res:
     raise RuntimeError ('Failed to project initial configuration')
@@ -538,4 +540,4 @@ from agimus_demos.tools_hpp import PathGenerator
 pg = PathGenerator(ps, graph)
 ps.setParameter('ConfigurationShooter/Gaussian/standardDeviation', 0.1)
 ps.setParameter('ConfigurationShooter/Gaussian/center', q_init)
-selected_handles = table.handles[18:] + table.handles[13:17] + table.handles[8:10] + table.handles[19:23]
+selected_handles = table.handles[5:10] + table.handles[16:20]
