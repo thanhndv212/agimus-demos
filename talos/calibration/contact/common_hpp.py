@@ -62,20 +62,32 @@ class Table(object):
         self.handles = [name + "/" + h for h in self.__class__.handles]
         self.contacts = [name + "/" + h for h in self.__class__.contacts]
 
+class Ground(object):
+    contacts = []
+    handles = ["contact"]
+    rootJointType = "freeflyer"
+    urdfFilename = "package://agimus_demos/urdf/ground.urdf"
+    srdfFilename = "package://agimus_demos/srdf/contact_ground.srdf"
+    def __init__(self, name, vf):
+        self.name = name
+        vf.loadObjectModel(self.__class__, name)
+        self.handles = [name + "/" + h for h in self.__class__.handles]
+        self.contacts = [name + "/" + h for h in self.__class__.contacts]
+
 HumanoidRobot.leftAnkle = "talos/leg_left_6_joint"
 HumanoidRobot.rightAnkle = "talos/leg_right_6_joint"
 HumanoidRobot.srdfString = ""
 
 def makeRobotProblemAndViewerFactory(clients):
-    try:
-        import rospy
-        HumanoidRobot.urdfString = rospy.get_param('robot_description')
-        HumanoidRobot.srdfString = getSrdfString()
-        print("reading URDF from ROS param")
-    except:
-        print("reading generic URDF")
-        HumanoidRobot.urdfFilename = "package://talos_data/urdf/pyrene.urdf"
-        HumanoidRobot.srdfFilename = "package://talos_data/srdf/pyrene.srdf"
+    # try:
+    #     import rospy
+    #     HumanoidRobot.urdfString = rospy.get_param('robot_description')
+    #     HumanoidRobot.srdfString = getSrdfString()
+    #     print("reading URDF from ROS param")
+    # except:
+    print("reading generic URDF")
+    HumanoidRobot.urdfFilename = "package://pyrene/urdf/robot.urdf"
+    HumanoidRobot.srdfFilename = "package://talos_data/srdf/pyrene.srdf"
 
     objects = list()
     robot = HumanoidRobot("talos", "talos", rootJointType="freeflyer", client=clients)
@@ -101,6 +113,7 @@ def makeRobotProblemAndViewerFactory(clients):
     vf = ViewerFactory(ps)
 
     table = Table(name="table", vf=vf)
+    # table = Ground(name="table", vf=vf)
     robot.setJointBounds("table/root_joint", [-2, 2, -2, 2, -2, 2])
 
     return robot, ps, vf, table, objects
